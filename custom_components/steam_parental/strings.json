@@ -26,7 +26,7 @@
       "no_steamid": "Steam did not return an account ID.",
       "already_configured": "That Steam account is already set up."
     },
-    "progress_action": {
+    "progress": {
       "awaiting_approval": "Waiting for you to approve the sign-in in the Steam app..."
     }
   },
