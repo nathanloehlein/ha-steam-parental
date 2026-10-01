@@ -35,14 +35,25 @@ _LOGGER = logging.getLogger(__name__)
 # them on its own schedule; this just stops the task running forever.
 APPROVAL_TIMEOUT = 300
 
-# The QR code is drawn by the frontend, not here. Home Assistant's markdown
-# sanitiser whitelists a `ha-qr-code` element with data / scale / margin /
-# error-correction-level attributes, and the step description uses it.
+# The QR code is drawn by the frontend. Home Assistant's markdown sanitiser
+# whitelists a `ha-qr-code` element taking data / scale / margin /
+# error-correction-level, so the step description only has to emit one.
 #
-# Worth knowing, because the obvious alternatives both fail: an inline SVG
-# data URI is stripped unless the surrounding component opts into
+# The element is built here rather than written into strings.json because
+# hassfest rejects HTML in translation strings. A placeholder is a runtime
+# value and is substituted before the markdown is rendered, so it arrives at
+# the sanitiser all the same.
+#
+# Worth recording, because the obvious alternatives both fail silently: an
+# inline SVG data URI is stripped unless the surrounding component sets
 # `allow-data-url`, and nothing in the frontend does, while raw inline SVG
-# needs `allow-svg`, which nothing sets either.
+# needs `allow-svg`, which is equally unset.
+
+
+def _qr_element(url: str) -> str:
+    """The challenge as a frontend-rendered QR code."""
+    return (f'<ha-qr-code data="{url}" scale="6" '
+            f'error-correction-level="medium"></ha-qr-code>')
 
 
 class SteamParentalConfigFlow(ConfigFlow, domain=DOMAIN):
@@ -71,7 +82,10 @@ class SteamParentalConfigFlow(ConfigFlow, domain=DOMAIN):
             return self.async_show_form(
                 step_id='user',
                 data_schema=vol.Schema({}),
-                description_placeholders={'url': self._challenge.url},
+                description_placeholders={
+                    'url': self._challenge.url,
+                    'qr': _qr_element(self._challenge.url),
+                },
             )
 
         return await self.async_step_wait()
