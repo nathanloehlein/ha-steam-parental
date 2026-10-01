@@ -35,6 +35,27 @@ _LOGGER = logging.getLogger(__name__)
 # them on its own schedule; this just stops the task running forever.
 APPROVAL_TIMEOUT = 300
 
+# Error correction M, which tolerates a phone camera at an angle without
+# pushing a 40-character URL past version 3 (37 modules square, including the
+# quiet zone). Scale 4 renders it at 148px - large enough to scan off a
+# monitor, small enough for the config-flow dialog.
+QR_SCALE = 4
+QR_BORDER = 3
+QR_ERROR = 'm'
+
+
+def _qr_data_uri(url: str) -> str:
+    """The challenge as a scannable SVG, inline.
+
+    An inline data URI rather than a served file: the config flow has no
+    entry yet, so there is nowhere to hang an HTTP view, and a one-shot login
+    image is not worth registering a route for.
+    """
+    import segno
+
+    return segno.make(url, error=QR_ERROR).svg_data_uri(
+        scale=QR_SCALE, border=QR_BORDER, dark='#000000', light='#ffffff')
+
 
 class SteamParentalConfigFlow(ConfigFlow, domain=DOMAIN):
     VERSION = 1
@@ -59,10 +80,15 @@ class SteamParentalConfigFlow(ConfigFlow, domain=DOMAIN):
                 return self.async_abort(reason='cannot_connect')
 
         if user_input is None:
+            qr = await self.hass.async_add_executor_job(
+                _qr_data_uri, self._challenge.url)
             return self.async_show_form(
                 step_id='user',
                 data_schema=vol.Schema({}),
-                description_placeholders={'url': self._challenge.url},
+                description_placeholders={
+                    'url': self._challenge.url,
+                    'qr': qr,
+                },
             )
 
         return await self.async_step_wait()
@@ -82,7 +108,6 @@ class SteamParentalConfigFlow(ConfigFlow, domain=DOMAIN):
                 step_id='wait',
                 progress_action='awaiting_approval',
                 progress_task=self._task,
-                description_placeholders={'url': self._challenge.url},
             )
 
         try:

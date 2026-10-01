@@ -47,9 +47,11 @@ install, restart, and add the integration from Settings → Devices & Services.
 
 Setup is two steps:
 
-1. **Sign in.** A link appears; open it on your phone with the Steam app
-   installed and approve. Home Assistant never sees your Steam password —
-   Steam authenticates you and returns a refresh token, good for months.
+1. **Sign in.** A QR code appears. In the Steam mobile app, open the menu and
+   choose *Sign in with QR code*, then scan it. Home Assistant never sees your
+   Steam password — Steam authenticates you and returns a refresh token, good
+   for months. A plain link is shown too, for phones that would rather follow
+   one.
 2. **Family View PIN.** Steam requires it on every write. It is verified
    immediately by writing your own settings back unchanged.
 

@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "Sign in to Steam",
-        "description": "Open this link on your phone, with the Steam app installed, and approve the sign-in:\n\n{url}\n\nThen submit this form.\n\nHome Assistant never sees your Steam password - Steam authenticates you on your phone and returns a token."
+        "description": "Open the Steam app on your phone, tap the menu, and choose **Sign in with QR code**. Scan this:\n\n![Steam sign-in QR code]({qr})\n\nThen submit this form.\n\nIf you cannot scan it, open this link on the phone instead: {url}\n\nHome Assistant never sees your Steam password - Steam authenticates you on your phone and returns a token."
       },
       "pin": {
         "title": "Family View PIN",
@@ -14,7 +14,7 @@
       },
       "retry": {
         "title": "Try again",
-        "description": "The sign-in was not approved. Submit to generate a fresh link."
+        "description": "The sign-in was not approved in time. Submit to generate a fresh QR code."
       }
     },
     "error": {
