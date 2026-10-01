@@ -1,0 +1,53 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Sign in to Steam",
+        "description": "Open this link on your phone, with the Steam app installed, and approve the sign-in:\n\n{url}\n\nThen submit this form.\n\nHome Assistant never sees your Steam password - Steam authenticates you on your phone and returns a token."
+      },
+      "pin": {
+        "title": "Family View PIN",
+        "description": "Steam requires the parental PIN for every change. It is checked now by writing your own settings back unchanged.",
+        "data": {
+          "pin": "PIN"
+        }
+      },
+      "retry": {
+        "title": "Try again",
+        "description": "The sign-in was not approved. Submit to generate a fresh link."
+      }
+    },
+    "error": {
+      "not_approved": "The sign-in was not approved in time. A new link has been generated.",
+      "invalid_pin": "Steam rejected that PIN."
+    },
+    "abort": {
+      "cannot_connect": "Could not reach Steam.",
+      "no_steamid": "Steam did not return an account ID.",
+      "already_configured": "That Steam account is already set up."
+    },
+    "progress_action": {
+      "awaiting_approval": "Waiting for you to approve the sign-in in the Steam app..."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "window_today": {
+        "name": "Allowed hours today"
+      },
+      "daily_limit": {
+        "name": "Daily limit today"
+      }
+    },
+    "binary_sensor": {
+      "playtime_permitted": {
+        "name": "Playtime permitted"
+      }
+    },
+    "switch": {
+      "playtime_enforced": {
+        "name": "Playtime enforced"
+      }
+    }
+  }
+}

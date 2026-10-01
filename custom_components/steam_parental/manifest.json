@@ -1,0 +1,12 @@
+{
+  "domain": "steam_parental",
+  "name": "Steam Families Parental Controls",
+  "codeowners": ["@nathanloehlein"],
+  "config_flow": true,
+  "documentation": "https://github.com/nathanloehlein/ha-steam-parental",
+  "integration_type": "hub",
+  "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/nathanloehlein/ha-steam-parental/issues",
+  "requirements": [],
+  "version": "0.1.0"
+}

@@ -1,0 +1,91 @@
+set_window:
+  name: Set playtime window
+  description: >-
+    Replace the allowed hours for one or more days. Steam enforces these on
+    every device signed into the account, including a Steam Deck.
+  fields:
+    steamid:
+      name: Steam ID
+      description: The 17-digit ID of the family member.
+      required: true
+      example: "76561199187492954"
+      selector:
+        text:
+    spans:
+      name: Allowed hours
+      description: >-
+        Half-hour resolution. "06:00-20:00", several separated by commas, or
+        the words all / none.
+      required: true
+      example: "06:00-20:00"
+      selector:
+        text:
+    days:
+      name: Days
+      description: today, all, weekdays, weekend, or a comma-separated list.
+      default: today
+      selector:
+        text:
+    minutes:
+      name: Daily cap
+      description: Minutes per day. Left as it is if omitted. 1440 is unlimited.
+      selector:
+        number:
+          min: 0
+          max: 1440
+          unit_of_measurement: min
+    enforce:
+      name: Enforce
+      description: >-
+        Turn enforcement on or off at the same time. Left alone if omitted -
+        editing a window should not silently start enforcing one.
+      selector:
+        boolean:
+
+set_daily_limit:
+  name: Set daily limit
+  description: Change the minutes-per-day cap without touching the hours.
+  fields:
+    steamid:
+      name: Steam ID
+      required: true
+      selector:
+        text:
+    minutes:
+      name: Minutes
+      required: true
+      selector:
+        number:
+          min: 0
+          max: 1440
+          unit_of_measurement: min
+    days:
+      name: Days
+      default: today
+      selector:
+        text:
+    enforce:
+      name: Enforce
+      selector:
+        boolean:
+
+grant_time:
+  name: Grant extra time
+  description: >-
+    Add minutes to today's cap. The reward lever - wire it to a chore
+    completion rather than editing the schedule by hand.
+  fields:
+    steamid:
+      name: Steam ID
+      required: true
+      selector:
+        text:
+    minutes:
+      name: Minutes to add
+      required: true
+      example: 30
+      selector:
+        number:
+          min: 1
+          max: 1440
+          unit_of_measurement: min
