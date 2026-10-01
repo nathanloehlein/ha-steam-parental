@@ -23,6 +23,7 @@ from .api import auth, parental
 from .api import protobuf_mini as pb
 from .api import windows as win
 from .const import (
+    CONF_PIN,
     CONF_REFRESH_TOKEN,
     CONF_STEAMID,
     DOMAIN,
@@ -82,6 +83,21 @@ class SteamParentalCoordinator(DataUpdateCoordinator[SteamParentalData]):
         self._client: parental.Client | None = None
         self._token_expires: datetime | None = None
         self._names: dict[int, str] = {}
+
+    @property
+    def pin(self) -> str:
+        """The parental PIN, or empty if setup skipped it.
+
+        Options win over data so it can be changed later without touching
+        the refresh token, which is the part that needs a phone.
+        """
+        return (self.entry.options.get(CONF_PIN)
+                or self.entry.data.get(CONF_PIN)
+                or '')
+
+    @property
+    def can_write(self) -> bool:
+        return bool(self.pin)
 
     # -- auth ----------------------------------------------------------------
 
@@ -163,13 +179,19 @@ class SteamParentalCoordinator(DataUpdateCoordinator[SteamParentalData]):
 
     async def async_set_days(self, steamid: int,
                              changes: dict[int, parental.Day],
-                             pin: str, enforce: bool | None = None) -> None:
+                             enforce: bool | None = None) -> None:
         """Rewrite some days for one member, leaving the rest alone.
 
         Read-modify-write against a freshly fetched settings blob rather than
         the cached one: the whole message goes back to Steam, and a stale copy
         would undo anything changed in the Steam app since the last poll.
         """
+        pin = self.pin
+        if not pin:
+            raise HomeAssistantError(
+                'No Steam parental PIN is configured, so nothing can be '
+                'changed. Add one in the integration options.')
+
         api = await self._api()
 
         def write() -> None:

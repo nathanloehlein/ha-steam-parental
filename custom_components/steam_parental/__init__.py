@@ -26,7 +26,6 @@ from .const import (
     ATTR_MINUTES,
     ATTR_SPANS,
     ATTR_STEAMID,
-    CONF_PIN,
     DOMAIN,
     SERVICE_GRANT_TIME,
     SERVICE_SET_DAILY_LIMIT,
@@ -116,9 +115,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    entry.async_on_unload(entry.add_update_listener(_async_options_updated))
 
     _register_services(hass)
     return True
+
+
+async def _async_options_updated(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Adding a PIN should make the write path work without a restart."""
+    await hass.config_entries.async_reload(entry.entry_id)
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
@@ -146,7 +151,6 @@ def _register_services(hass: HomeAssistant) -> None:
     async def set_window(call: ServiceCall) -> None:
         steamid = call.data[ATTR_STEAMID]
         coordinator = _coordinator_for(hass, steamid)
-        pin = coordinator.entry.data[CONF_PIN]
         mask = parse_spans(call.data[ATTR_SPANS])
         minutes = call.data.get(ATTR_MINUTES)
 
@@ -159,13 +163,12 @@ def _register_services(hass: HomeAssistant) -> None:
                 daily_minutes=(current.daily_minutes if minutes is None
                                else minutes),
             )
-        await coordinator.async_set_days(steamid, changes, pin,
+        await coordinator.async_set_days(steamid, changes,
                                          call.data.get(ATTR_ENFORCE))
 
     async def set_daily_limit(call: ServiceCall) -> None:
         steamid = call.data[ATTR_STEAMID]
         coordinator = _coordinator_for(hass, steamid)
-        pin = coordinator.entry.data[CONF_PIN]
         member = coordinator.data.members[steamid]
 
         changes = {}
@@ -174,14 +177,13 @@ def _register_services(hass: HomeAssistant) -> None:
                 windows=member.days[index].windows,
                 daily_minutes=call.data[ATTR_MINUTES],
             )
-        await coordinator.async_set_days(steamid, changes, pin,
+        await coordinator.async_set_days(steamid, changes,
                                          call.data.get(ATTR_ENFORCE))
 
     async def grant_time(call: ServiceCall) -> None:
         """Add minutes to today's cap. The chore-reward lever."""
         steamid = call.data[ATTR_STEAMID]
         coordinator = _coordinator_for(hass, steamid)
-        pin = coordinator.entry.data[CONF_PIN]
         import homeassistant.util.dt as dt_util
 
         index = (dt_util.now().weekday() + 1) % 7
@@ -191,7 +193,7 @@ def _register_services(hass: HomeAssistant) -> None:
             daily_minutes=min(win.UNLIMITED_MINUTES,
                               current.daily_minutes + call.data[ATTR_MINUTES]),
         )}
-        await coordinator.async_set_days(steamid, changes, pin)
+        await coordinator.async_set_days(steamid, changes)
 
     hass.services.async_register(DOMAIN, SERVICE_SET_WINDOW, set_window,
                                  schema=SET_WINDOW_SCHEMA)

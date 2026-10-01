@@ -51,8 +51,18 @@ Setup is two steps:
    choose *Sign in with QR code*, then scan it. Home Assistant never sees your
    Steam password — Steam authenticates you and returns a refresh token, good
    for months.
-2. **Family View PIN.** Steam requires it on every write. It is verified
-   immediately by writing your own settings back unchanged.
+2. **Family View PIN** — optional. Steam asks for it on every *write*;
+   everything that reports works without it. Tick "set this up later" to
+   finish now and add the PIN from the integration's options whenever you
+   like. Changing the PIN never touches your sign-in, so there is no second
+   QR scan.
+
+   With no PIN the integration is read-only: sensors populate as normal, the
+   enforcement switch shows as unavailable, and the services raise rather
+   than failing quietly.
+
+   The PIN is verified by writing your own settings back unchanged, so
+   entering it alters nothing.
 
 ## Example: tie Steam to chores
 

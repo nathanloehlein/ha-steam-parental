@@ -15,7 +15,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import CONF_PIN, DOMAIN
+from .const import DOMAIN
 from .coordinator import SteamParentalCoordinator
 from .entity import SteamParentalEntity
 
@@ -47,8 +47,14 @@ class EnforcementSwitch(SteamParentalEntity, SwitchEntity):
     async def async_turn_off(self, **kwargs: Any) -> None:
         await self._set(False)
 
+    @property
+    def available(self) -> bool:
+        # Without a PIN this is a read-only mirror of a setting nobody here
+        # can move, and a switch that silently refuses is worse than one that
+        # shows itself as unavailable.
+        return super().available and self.coordinator.can_write
+
     async def _set(self, enforce: bool) -> None:
-        pin = self.coordinator.entry.data[CONF_PIN]
         # No day changes; only the flag moves.
-        await self.coordinator.async_set_days(self._steamid, {}, pin,
+        await self.coordinator.async_set_days(self._steamid, {},
                                               enforce=enforce)

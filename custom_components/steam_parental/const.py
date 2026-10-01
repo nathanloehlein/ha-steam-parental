@@ -10,6 +10,7 @@ CONF_REFRESH_TOKEN = 'refresh_token'
 CONF_STEAMID = 'steamid'
 CONF_FAMILY_GROUPID = 'family_groupid'
 CONF_PIN = 'pin'
+CONF_SKIP_PIN = 'skip_pin'
 
 # Steam is not going to change underneath us minute to minute, and every poll
 # is one request per family member. Five minutes keeps the entities honest

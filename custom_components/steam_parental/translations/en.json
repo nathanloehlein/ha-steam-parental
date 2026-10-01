@@ -7,9 +7,10 @@
       },
       "pin": {
         "title": "Family View PIN",
-        "description": "Steam requires the parental PIN for every change. It is checked now by writing your own settings back unchanged.",
+        "description": "Steam asks for the parental PIN on every change. Without it this integration still reports everything - allowed hours, daily limits, whether play is permitted right now - but cannot change anything.\n\nThe PIN is checked by writing your own settings back unchanged, so nothing is altered by entering it.",
         "data": {
-          "pin": "PIN"
+          "pin": "PIN",
+          "skip_pin": "Set this up later - I understand nothing can be changed until a PIN is entered"
         }
       },
       "retry": {
@@ -19,7 +20,11 @@
     },
     "error": {
       "not_approved": "The sign-in was not approved in time. A new link has been generated.",
-      "invalid_pin": "Steam rejected that PIN."
+      "invalid_pin": "Steam rejected that PIN.",
+      "auth_failed": "The Steam sign-in token could not be renewed. Start again.",
+      "cannot_read": "Signed in, but Steam would not return the parental settings. Check the Home Assistant log.",
+      "write_failed": "Signed in and the PIN was not the problem, but Steam refused the write. Check the Home Assistant log.",
+      "pin_required": "Enter the PIN, or tick the box to set it up later."
     },
     "abort": {
       "cannot_connect": "Could not reach Steam.",
@@ -48,6 +53,25 @@
       "playtime_enforced": {
         "name": "Playtime enforced"
       }
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Family View PIN",
+        "description": "Steam requires this for every change. Leave it empty to clear it and make the integration read-only.\n\nChanging it here does not affect your Steam sign-in, so there is no QR code to scan again.",
+        "data": {
+          "pin": "PIN"
+        }
+      }
+    },
+    "error": {
+      "not_approved": "The sign-in was not approved in time. A new link has been generated.",
+      "invalid_pin": "Steam rejected that PIN.",
+      "auth_failed": "The Steam sign-in token could not be renewed. Start again.",
+      "cannot_read": "Signed in, but Steam would not return the parental settings. Check the Home Assistant log.",
+      "write_failed": "Signed in and the PIN was not the problem, but Steam refused the write. Check the Home Assistant log.",
+      "pin_required": "Enter the PIN, or tick the box to set it up later."
     }
   }
 }
