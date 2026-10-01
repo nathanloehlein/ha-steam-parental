@@ -35,7 +35,14 @@ API = 'https://api.steampowered.com'
 # CAuthentication_BeginAuthSessionViaQR_Request
 F_QR_DEVICE_FRIENDLY_NAME = 1
 F_QR_PLATFORM_TYPE = 2
-F_QR_DEVICE_DETAILS = 4
+F_QR_DEVICE_DETAILS = 3
+F_QR_WEBSITE_ID = 4
+
+# CAuthentication_DeviceDetails
+F_DEV_FRIENDLY_NAME = 1
+F_DEV_PLATFORM_TYPE = 2
+F_DEV_OS_TYPE = 3
+F_DEV_GAMING_DEVICE_TYPE = 4
 
 # CAuthentication_BeginAuthSessionViaQR_Response, read off a live response:
 #   1: varint client_id
@@ -67,12 +74,55 @@ F_GEN_RENEWAL_TYPE = 3
 F_GEN_RESP_ACCESS_TOKEN = 1
 F_GEN_RESP_REFRESH_TOKEN = 2
 
-# EAuthTokenPlatformType
+# EAuthTokenPlatformType. MobileApp, and the choice is not cosmetic.
+#
+# GenerateAccessTokenForApp - the call that turns a long-lived refresh token
+# into a fresh access token, which is the only thing that makes unattended
+# operation possible - accepts exactly one kind of token over the Web API:
+#
+#   WebBrowser   AccessDenied. Browser sessions renew through the website.
+#   SteamClient  AccessDenied, unless the request goes over an authenticated
+#                CM websocket, which means speaking the Steam client protocol.
+#   MobileApp    works.
+#
+# Both of the first two were tried against live tokens, with renewal_type set
+# and unset, steamid present and absent, the token echoed as a query
+# parameter and as a bearer header, with and without the Accept and
+# User-Agent headers a working Go client sends, and against the endpoint with
+# and without its trailing slash. Every one answered HTTP 200, an empty body
+# and x-eresult 15. The behaviour is documented in node-steam-session.
+PLATFORM_STEAM_CLIENT = 1
 PLATFORM_WEB_BROWSER = 2
+PLATFORM_MOBILE_APP = 3
+
+# EOSType.AndroidUnknown, and a gaming_device_type the Steam mobile app sends.
+# Steam wants a plausible device, not a specific one.
+OS_TYPE_ANDROID = -500
+GAMING_DEVICE_TYPE_PHONE = 528
+
+WEBSITE_ID_MOBILE = 'Mobile'
+
+# Steam decides a request came from the mobile app by looking for
+# mobileClientVersion in the cookie, so a mobile login has to look the part.
+MOBILE_HEADERS = {
+    'User-Agent': 'okhttp/4.9.2',
+    'Cookie': 'mobileClient=android; mobileClientVersion=777777 3.10.3',
+}
 
 
 class AuthError(RuntimeError):
     pass
+
+
+class ChallengeExpired(AuthError):
+    """The QR challenge is no longer live and a new one is needed.
+
+    Steam does not say so politely: an expired or unknown client_id comes
+    back as HTTP 500 with an HTML body reading "Transport error 2", which is
+    indistinguishable from a server fault unless you know to expect it.
+    Challenges last roughly a couple of minutes, so anything that displays
+    one has to be ready to draw another.
+    """
 
 
 @dataclass
@@ -90,7 +140,9 @@ def _post(method: str, body: bytes, *, timeout: int = 30) -> bytes:
     ).encode()
     request = urllib.request.Request(url, data=data)
     request.add_header('Content-Type', 'application/x-www-form-urlencoded')
-    request.add_header('User-Agent', 'home-assistant-steam-parental/0.1')
+    request.add_header('Accept', 'application/x-protobuf')
+    for name, value in MOBILE_HEADERS.items():
+        request.add_header(name, value)
     try:
         with urllib.request.urlopen(request, timeout=timeout) as resp:
             return resp.read()
@@ -103,9 +155,18 @@ def _post(method: str, body: bytes, *, timeout: int = 30) -> bytes:
 
 
 def begin_qr(device_name: str = 'home-assistant') -> QRChallenge:
+    details = pb.encode([
+        pb.string(F_DEV_FRIENDLY_NAME, device_name),
+        pb.varint(F_DEV_PLATFORM_TYPE, PLATFORM_MOBILE_APP),
+        # A negative int32 travels as its two's-complement 64-bit value.
+        pb.varint(F_DEV_OS_TYPE, OS_TYPE_ANDROID & 0xFFFFFFFFFFFFFFFF),
+        pb.varint(F_DEV_GAMING_DEVICE_TYPE, GAMING_DEVICE_TYPE_PHONE),
+    ])
     body = pb.encode([
         pb.string(F_QR_DEVICE_FRIENDLY_NAME, device_name),
-        pb.varint(F_QR_PLATFORM_TYPE, PLATFORM_WEB_BROWSER),
+        pb.varint(F_QR_PLATFORM_TYPE, PLATFORM_MOBILE_APP),
+        pb.Field(F_QR_DEVICE_DETAILS, pb.WIRE_LEN, details),
+        pb.string(F_QR_WEBSITE_ID, WEBSITE_ID_MOBILE),
     ])
     fields = pb.decode(_post('BeginAuthSessionViaQR', body))
 
@@ -136,7 +197,14 @@ def poll_once(challenge: QRChallenge) -> tuple[str, str] | None:
         pb.varint(F_POLL_CLIENT_ID, challenge.client_id),
         pb.Field(F_POLL_REQUEST_ID, pb.WIRE_LEN, challenge.request_id),
     ])
-    fields = pb.decode(_post('PollAuthSessionStatus', body))
+    try:
+        raw = _post('PollAuthSessionStatus', body)
+    except AuthError as err:
+        if 'HTTP 500' in str(err) or 'Transport error' in str(err):
+            raise ChallengeExpired('the QR code expired before it was '
+                                   'scanned') from None
+        raise
+    fields = pb.decode(raw)
     refresh = pb.get(fields, F_POLL_RESP_REFRESH_TOKEN)
     if refresh and refresh.value:
         name = pb.get(fields, F_POLL_RESP_ACCOUNT_NAME)
