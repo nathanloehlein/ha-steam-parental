@@ -56,8 +56,15 @@ F_REQ_SESSIONID = 4
 F_REQ_STEAMID = 10
 
 
+# EResult values worth naming. Steam reports failure in a header, not a
+# status code, so these decide whether a 200 actually meant yes.
+ERESULT_OK = '1'
+ERESULT_INVALID_PASSWORD = '5'
+ERESULT_ACCESS_DENIED = '15'
+
+
 class SteamError(RuntimeError):
-    """A non-2xx from the API, with whatever Steam said about it."""
+    """A refusal from the API, with whatever Steam said about it."""
 
     def __init__(self, status: int, message: str, eresult: str | None = None):
         self.status = status
@@ -128,6 +135,19 @@ class Client:
         try:
             with urllib.request.urlopen(request, timeout=self._timeout) as resp:
                 raw = resp.read()
+                # Steam says no with HTTP 200 and an x-eresult header, not a
+                # status code. A write it refuses comes back 200, empty, and
+                # eresult 15 - indistinguishable from success unless the
+                # header is read. Missing the header is normal on calls that
+                # succeed and return JSON.
+                eresult = resp.headers.get('x-eresult')
+                if eresult is not None and eresult != ERESULT_OK:
+                    raise SteamError(
+                        resp.status,
+                        f'{iface}/{method} refused '
+                        f'({len(raw)} bytes returned)',
+                        eresult,
+                    )
         except urllib.error.HTTPError as err:
             raise SteamError(
                 err.code,
