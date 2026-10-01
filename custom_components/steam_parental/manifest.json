@@ -9,8 +9,6 @@
   "integration_type": "hub",
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/nathanloehlein/ha-steam-parental/issues",
-  "requirements": [
-    "segno==1.6.1"
-  ],
+  "requirements": [],
   "version": "0.1.0"
 }
