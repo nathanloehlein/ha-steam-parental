@@ -29,7 +29,9 @@
     "abort": {
       "cannot_connect": "Could not reach Steam.",
       "no_steamid": "Steam did not return an account ID.",
-      "already_configured": "That Steam account is already set up."
+      "already_configured": "That Steam account is already set up.",
+      "wrong_account": "That is a different Steam account. Sign in as the one this entry was set up with.",
+      "reauth_successful": "Signed in again."
     },
     "progress": {
       "awaiting_approval": "Waiting for you to approve the sign-in in the Steam app..."

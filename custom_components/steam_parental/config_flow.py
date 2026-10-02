@@ -72,11 +72,27 @@ class SteamParentalConfigFlow(ConfigFlow, domain=DOMAIN):
     VERSION = 1
 
     def __init__(self) -> None:
+        self._reauth_entry: ConfigEntry | None = None
         self._challenge: auth.QRChallenge | None = None
         self._task: asyncio.Task[tuple[str, str]] | None = None
         self._refresh_token: str | None = None
         self._steamid: int | None = None
         self._account: str = ''
+
+    async def async_step_reauth(
+        self, entry_data: dict[str, Any]
+    ) -> ConfigFlowResult:
+        """Steam has stopped accepting the stored token.
+
+        Most often because the password was changed, which revokes every
+        refresh token on the account. The way back is the same QR scan as
+        first setup, so this joins that flow and only differs at the end:
+        the existing entry is updated in place, keeping the PIN, rather than
+        a second entry being created.
+        """
+        self._reauth_entry = self.hass.config_entries.async_get_entry(
+            self.context['entry_id'])
+        return await self.async_step_user()
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
@@ -134,8 +150,28 @@ class SteamParentalConfigFlow(ConfigFlow, domain=DOMAIN):
         self._steamid = int(steamid)
 
         await self.async_set_unique_id(str(steamid))
-        self._abort_if_unique_id_configured()
-        return self.async_show_progress_done(next_step_id='pin')
+        if self._reauth_entry is None:
+            self._abort_if_unique_id_configured()
+        elif self._reauth_entry.unique_id != str(steamid):
+            # Signing in as somebody else would quietly repoint the entry at
+            # a different family.
+            return self.async_abort(reason='wrong_account')
+        return self.async_show_progress_done(
+            next_step_id='finish' if self._reauth_entry else 'pin')
+
+    async def async_step_finish(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Reauth only: swap in the new token and keep everything else."""
+        assert self._reauth_entry and self._refresh_token and self._steamid
+        return self.async_update_reload_and_abort(
+            self._reauth_entry,
+            data={
+                **self._reauth_entry.data,
+                CONF_REFRESH_TOKEN: self._refresh_token,
+                CONF_STEAMID: self._steamid,
+            },
+        )
 
     async def async_step_retry(
         self, user_input: dict[str, Any] | None = None
